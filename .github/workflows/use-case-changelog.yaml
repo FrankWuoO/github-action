@@ -1,0 +1,82 @@
+name: Produce change log
+
+on:
+  workflow_call:
+    inputs:
+      new_branch:
+        type: string
+      pr_titles:
+        type: string
+        required: true
+      filename:
+        type: string
+        required: true
+        default: 'changelog.txt'
+
+
+jobs:
+  produce-change-log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout repo"
+        id: checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.new_branch }}
+          fetch-depth: 0
+
+      - name: "Produce changelog"
+        uses: actions/github-script@v6
+        id: write-changelog
+        env:
+          PR_TITLES: ${{ inputs.pr_titles }}
+          CHANGE_LOG_FILE_NAME: ${{ inputs.filename }}
+        with:
+          script: |
+            const fs = require("fs");
+            
+            titles = JSON.parse(process.env.PR_TITLES)
+            var content = ""
+            for (let i = 1; i <= titles.length; ++i) {
+              const title = titles[i-1].trim()
+              if (title) {
+                content += `${i}. ${title}\n`
+              }
+            }
+            
+            const path = require('path');
+
+            // Define the directory and file paths
+            const dirPath = path.join(process.env.GITHUB_WORKSPACE, 'fastlane');
+            const filePath = path.join(dirPath, process.env.CHANGE_LOG_FILE_NAME);
+            
+            try {          
+              // Check if the directory exists, create it if it doesn't
+              if (!fs.existsSync(dirPath)) {
+                fs.mkdirSync(dirPath, { recursive: true });
+              }
+              fs.writeFileSync(filePath, content);
+            } catch (error) {
+              core.error('Error writing file:' + error);
+            }
+            
+            core.setOutput("changelog", content)
+
+      - name: "Git commit"
+        id: git
+        run: |
+          git config user.email "${{ secrets.ACTION_BOT_EMAIL }}"
+          git config user.name "${{ secrets.ACTION_BOT_NAME }}"
+          git add --all
+          if [[ -z "$(git status --porcelain)" ]]; then
+             echo "push=false" >> $GITHUB_OUTPUT
+          else
+             git commit -m "Update changelog" -a
+             echo "push=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "Push changes"
+        if: steps.git.outputs.push == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          branch: ${{ inputs.new_branch }}
