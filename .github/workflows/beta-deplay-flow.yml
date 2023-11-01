@@ -1,0 +1,157 @@
+name: Beta deploy flow
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_milestone:
+        description: "The target milestone"
+        type: string
+        required: true
+
+jobs:
+  Merge-PR:
+    runs-on: ubuntu-latest
+    outputs:
+      beta_branch: ${{ steps.beta-branch.outputs.branch }}
+      target_version: ${{ steps.beta-version.outputs.version }}
+      titles: ${{ steps.fetch-pr.outputs.titles }}
+    steps:
+      - name: "Checkout repo"
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: "Find beta version"
+        id: beta-version
+        run: |
+          latest_beta_branch=$(git branch -r --list 'origin/beta/${{ inputs.target_milestone }}-*' --sort=-version:refname | head -n 1 | tr -d ' ')
+          if [[ -z $latest_beta_branch ]]; then
+            # 之前沒有這個beta版本, 是新beta版號
+            echo "version=${{ inputs.target_milestone }}-0" >> $GITHUB_OUTPUT  
+          else
+            version=$(echo $latest_beta_branch | sed 's/origin\/beta\///')
+            
+            rx="^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)"
+            
+            # Check validation with format "a.b.c-x"
+            if [[ ! $version =~ $rx ]]; then
+            exit "Invalidate version input"
+            fi
+            
+            new_version="${BASH_REMATCH[1]}-$((BASH_REMATCH[2]+1))"
+            echo "version=$new_version" >> $GITHUB_OUTPUT
+          fi
+
+
+      # - name: "Create beta branch"
+      #   id: beta-branch
+      #   run: |
+      #     new_branch="beta/${{ steps.beta-version.outputs.version }}"
+      #     git checkout -b $new_branch
+      #     echo "branch=$new_branch" >> $GITHUB_OUTPUT
+
+      # - name: "Fetch PR head branch"
+      #   uses: actions/github-script@v6
+      #   id: fetch-pr
+      #   with:
+      #     github-token: ${{ github.token }}
+      #     script: |
+      #       branches = ""
+      #       titles = []
+            
+      #       // About search qualifiers, see: https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests
+      #       query = `repo:${context.repo.owner}/${context.repo.repo} is:pr is:open label:beta milestone:${{ inputs.target_milestone }}` 
+      #       const response = await github.rest.search.issuesAndPullRequests({
+      #         q: query,
+      #       })
+      #       const items = response.data.items
+            
+      #       for (let i in items) {
+      #         const item = items[i]
+      #         const { data: pull } = await github.rest.pulls.get({
+      #           pull_number: item.number,
+      #           owner: context.repo.owner,
+      #           repo: context.repo.repo
+      #         })
+      #         branches += `${pull.head.ref},`
+      #         if (!item.labels.find((label) => label.name == "no-changelog")) {
+      #           titles.push(item.title)
+      #         }
+      #       }
+            
+      #       // Remove the trailing delimiter (last comma) from the result
+      #       branches=branches.slice(0, -1)
+
+      #       core.setOutput("branches", branches)
+      #       core.setOutput("titles", titles)
+
+      # - name: "Merge PR branch"
+      #   run: |
+      #     git config user.email "${{ secrets.ACTION_BOT_EMAIL }}"
+      #     git config user.name "${{ secrets.ACTION_BOT_NAME }}"
+
+      #     IFS=','
+      #     branches="${{ steps.fetch-pr.outputs.branches }}"
+      #     current_branch=$(git rev-parse --abbrev-ref HEAD)
+          
+      #     for branch in $branches; do
+      #       git fetch origin $branch
+      #       git merge --squash "origin/$branch" 
+      #       git commit -m "Merge branch '$branch' into $current_branch"
+      #     done
+
+      # - name: "Push changes"
+        # uses: ad-m/github-push-action@master
+        # with:
+        #   branch: ${{ steps.beta-branch.outputs.branch }}
+    
+  # Produce-changelog:
+  #   needs: [ Merge-PR ]
+  #   uses: ./.github/workflows/use-case-changelog.yaml
+  #   if: ${{ success() }}
+  #   secrets: inherit
+  #   with:
+  #     new_branch: ${{ needs.Merge-PR.outputs.beta_branch }}
+  #     pr_titles: ${{ needs.Merge-PR.outputs.titles }}
+  #     filename: 'changelog.txt'
+
+  # Bump-version:
+  #   needs: [ Merge-PR, Produce-changelog ]
+  #   uses: ./.github/workflows/use-case-bump-version.yaml
+  #   secrets: inherit
+  #   with:
+  #     new_branch: ${{ needs.Merge-PR.outputs.beta_branch }}
+  #     version: ${{ needs.Merge-PR.outputs.target_version }}
+
+  Debug:
+    if: ${{ always() }}
+    #needs: [ Merge-PR, Bump-version, Produce-changelog ]
+    needs: [ Merge-PR ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Print something"
+        run: |
+          echo beta branch: $needs.Merge-PR.outputs.beta_branch
+          echo target_version: $needs.Merge-PR.outputs.target_version
+          echo titles: $needs.Merge-PR.outputs.titles
+
+  # Slack-notify:
+  #   needs: [ Bump-version ]
+  #   uses: ./.github/workflows/use-case-slack-ci-notify.yaml
+  #   secrets: inherit
+  #   if: ${{ always() && !cancelled() }}
+  #   with:
+  #     is_success: ${{ needs.Bump-version.result == 'success' }}
+
+  # Circle-ci-deploy:
+  #   runs-on: ubuntu-latest
+  #   needs: [ Merge-PR, Bump-version ]
+  #   if: ${{ success() }}
+  #   steps:
+  #     - name: trigger circle ci
+  #       id: 'deploy-beta'
+  #       uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.1.0
+  #       env:
+  #         CCI_TOKEN: ${{ secrets.CIRCLECI_TOKEN }}
+  #       with:
+  #         target-branch: ${{ needs.Merge-PR.outputs.beta_branch }}
