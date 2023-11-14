@@ -113,18 +113,17 @@ jobs:
       pr_titles: ${{ needs.Merge-PR.outputs.titles }}
       filename: 'changelog.txt'
 
-  # Bump-version:
-  #   needs: [ Merge-PR, Produce-changelog ]
-  #   uses: ./.github/workflows/use-case-bump-version.yaml
-  #   secrets: inherit
-  #   with:
-  #     new_branch: ${{ needs.Merge-PR.outputs.beta_branch }}
-  #     version: ${{ needs.Merge-PR.outputs.target_version }}
+  Bump-version:
+    needs: [ Merge-PR, Produce-changelog ]
+    uses: ./.github/workflows/use-case-bump-version.yaml
+    secrets: inherit
+    with:
+      new_branch: ${{ needs.Merge-PR.outputs.beta_branch }}
+      version: ${{ needs.Merge-PR.outputs.target_version }}
 
   Debug:
     if: ${{ always() }}
-    #needs: [ Merge-PR, Bump-version, Produce-changelog ]
-    needs: [ Merge-PR ]
+    needs: [ Merge-PR, Bump-version, Produce-changelog ]
     runs-on: ubuntu-latest
     steps:
       - name: "Print something"
