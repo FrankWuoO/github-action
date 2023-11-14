@@ -10,7 +10,7 @@ on:
         required: true
       version_file:
         type: string
-        default: gradle/libs.versions.toml
+        default: FunNow.xcodeproj/project.pbxproj
 
 jobs:
   Bump-version:
@@ -36,39 +36,36 @@ jobs:
           fi
           
           # Parse input
-          newMajor=${BASH_REMATCH[1]}
-          newMinor=${BASH_REMATCH[2]}
-          newPatch=${BASH_REMATCH[3]}
-          newStaging=${BASH_REMATCH[5]} 
+          major=${BASH_REMATCH[1]}
+          minor=${BASH_REMATCH[2]}
+          patch=${BASH_REMATCH[3]}
+          buildNumber=${BASH_REMATCH[5]} 
           
-          echo "newMajor: $newMajor"
-          echo "newMinor: $newMinor"
-          echo "newPatch: $newPatch"
-          echo "newStaging: $newStaging"
+          version="$major.$minor.$patch"
 
           # Write file
-          # sed -i -E "s/versionMajor = \"([0-9]+)\"/versionMajor = \"$newMajor\"/" ${{ inputs.version_file }}
-          # sed -i -E "s/versionMinor = \"([0-9]+)\"/versionMinor = \"$newMinor\"/" ${{ inputs.version_file }}
-          # sed -i -E "s/versionPatch = \"([0-9]+)\"/versionPatch = \"$newPatch\"/" ${{ inputs.version_file }}
-          # if [[ ! -z $newStaging ]]; then
-          #   sed -i -E "s/versionStaging = \"([0-9]+)\"/versionStaging = \"$newStaging\"/" ${{ inputs.version_file }}
-          # fi
+          sed -i -E "s/versionMajor = \"([0-9]+)\"/versionMajor = \"$newMajor\"/" ${{ inputs.version_file }}
+          sed -i -E "s/versionMinor = \"([0-9]+)\"/versionMinor = \"$newMinor\"/" ${{ inputs.version_file }}
+          sed -i -E "s/versionPatch = \"([0-9]+)\"/versionPatch = \"$newPatch\"/" ${{ inputs.version_file }}
 
-      # - name: "Git commit"
-      #   id: git
-      #   run: |
-      #     git config user.email "${{ secrets.ACTION_BOT_EMAIL }}"
-      #     git config user.name "${{ secrets.ACTION_BOT_NAME }}"
-      #     git add --all
-      #     if [[ -z "$(git status --porcelain)" ]]; then
-      #        echo "push=false" >> $GITHUB_OUTPUT
-      #     else
-      #        git commit -m "Bump version ${{ inputs.version }}" -a
-      #        echo "push=true" >> $GITHUB_OUTPUT
-      #     fi
+          sed -i '' 's/MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*/MARKETING_VERSION = \"$version\"/' ${{ inputs.version_file }}
+          sed -i '' 's/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = 77;/' ${{ inputs.version_file }}
 
-      # - name: "Push changes"
-      #   if: steps.git.outputs.push == 'true'
-      #   uses: ad-m/github-push-action@master
-      #   with:
-      #     branch: ${{ inputs.new_branch }}
+      - name: "Git commit"
+        id: git
+        run: |
+          git config user.email "${{ secrets.ACTION_BOT_EMAIL }}"
+          git config user.name "${{ secrets.ACTION_BOT_NAME }}"
+          git add --all
+          if [[ -z "$(git status --porcelain)" ]]; then
+             echo "push=false" >> $GITHUB_OUTPUT
+          else
+             git commit -m "Bump version ${{ inputs.version }}" -a
+             echo "push=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "Push changes"
+        if: steps.git.outputs.push == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          branch: ${{ inputs.new_branch }}
