@@ -121,21 +121,6 @@ jobs:
       new_branch: ${{ needs.Merge-PR.outputs.beta_branch }}
       version: ${{ needs.Merge-PR.outputs.target_version }}
 
-  Debug:
-    if: ${{ always() }}
-    needs: [ Merge-PR, Bump-version, Produce-changelog ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Print something"
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: |
-          echo "beta_branch: ${{ needs.Merge-PR.outputs.beta_branch }}"
-          echo "target_version: ${{ needs.Merge-PR.outputs.target_version }}"
-          echo "titles: ${{ needs.Merge-PR.outputs.titles }}"
-          echo "fetch-pr branches: ${{ needs.Merge-PR.outputs.branches }}"
-          echo "fetch-pr titles: ${{ needs.Merge-PR.outputs.titles }}"
-          echo "-end up-"
   # Slack-notify:
   #   needs: [ Bump-version ]
   #   uses: ./.github/workflows/use-case-slack-ci-notify.yaml
