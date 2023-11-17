@@ -6,11 +6,10 @@ on:
     inputs:
       version:
         description: "The target version (x.x.x)"
-        type: string
         required: true
       build_number:
-        description: "Build number(`1`, `2`)"
-        type: number
+        description: "Build number"
+        default: '1'
         required: true
 
 env:
@@ -32,19 +31,26 @@ jobs:
       - name: "Create staging branch"
         id: staging-branch
         run: |
+          git config user.email "${{ secrets.ACTION_BOT_EMAIL }}"
+          git config user.name "${{ secrets.ACTION_BOT_NAME }}"        
           git checkout -b $STAGING_BRANCH
       
       - name: Generate changelog
         run: |
-          latest_tag=$(git describe --tags --abbrev=0)
-          git log ${latest_tag}..HEAD --pretty=format:"%s" | grep "\[JIRA-\d+\]" | sed 's/^/- /' > $CHANGLOG_PATH
-          git commit -m "Update changelog"
-          git push origin $STAGING_BRANCH
+          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "1.---"
+          git log $latest_tag..HEAD --pretty=format:"%s"
+          echo "2.---"
+          git log $latest_tag..HEAD --pretty=format:"%s" | grep "\[JIRA-\d+\]"
+          echo "---"
+          git log $latest_tag..HEAD --pretty=format:"%s" | grep -E "\[JIRA-\d+\]" | sed 's/^/- /' > $CHANGLOG_PATH
+          git commit -a -m "Update changelog"
 
       - name: "Bump version"
         run: |
           sed -i "s/MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*/MARKETING_VERSION = $VERSION/" $PROJECT_PATH
           sed -i "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/" $PROJECT_PATH
+          git commit -a -m "Bump version ${{ inputs.version }}(${{ inputs.build_number }})"
 
       - name: "Create pull request"
         run: |
