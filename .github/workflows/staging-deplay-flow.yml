@@ -50,7 +50,7 @@ jobs:
       - name: "Push changes"
         uses: ad-m/github-push-action@master
         with:
-          branch: $STAGING_BRANCH
+          branch: ${{ env.STAGING_BRANCH }}
     
       - name: "Create pull request"
         run: |
