@@ -39,8 +39,6 @@ jobs:
         run: |
           latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
           echo "1.---"
-          git log $latest_tag..HEAD --pretty=format:"%s"
-          echo "2.---"
           git log $latest_tag..HEAD --pretty=format:"%s" | grep -E "\[JIRA-\d+\]"
           echo "---"
           git log $latest_tag..HEAD --pretty=format:"%s" | grep -E "\[JIRA-\d+\]" | sed 's/^/- /' > $CHANGLOG_PATH
