@@ -47,6 +47,11 @@ jobs:
           sed -i "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/" $PROJECT_PATH
           git commit -a -m "Bump version ${{ inputs.version }}(${{ inputs.build_number }})"
 
+      - name: "Push changes"
+        uses: ad-m/github-push-action@master
+        with:
+          branch: $STAGING_BRANCH
+    
       - name: "Create pull request"
         run: |
           pr_title="Generate changelog and bump version for $VERSION($BUILD_NUMBER)"
@@ -55,9 +60,3 @@ jobs:
           gh pr create --base master --head staging/${VERSION} --title "Staging Release ${VERSION}" --body "New staging release ${VERSION}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: "Push changes"
-        uses: ad-m/github-push-action@master
-        with:
-          branch: $STAGING_BRANCH
-    
