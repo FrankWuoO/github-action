@@ -38,8 +38,7 @@ jobs:
       - name: Generate changelog
         run: |
           latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-          echo $CHANGLOG_PATH
-          git log $latest_tag..HEAD --pretty=format:"%s" | grep -E "\[JIRA-\d+\]" | sed 's/^/- /' > $CHANGLOG_PATH
+          git log $latest_tag..HEAD --pretty=format:"%s" > $CHANGLOG_PATH
           git commit -a -m "Update changelog"
 
       - name: "Bump version"
