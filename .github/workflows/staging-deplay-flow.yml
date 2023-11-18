@@ -20,7 +20,7 @@ env:
   PROJECT_PATH: 'FunNow.xcodeproj/project.pbxproj'
 
 jobs:
-  Merge-PR:
+  generate-changelog-and-bump-version:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout repo"
