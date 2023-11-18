@@ -32,7 +32,7 @@ jobs:
             exit 1
           fi
 
-      - name: Create PR from master to release
+      - name: "Create PR from master to release"
         run: |
           version=${{ steps.extract_version.outputs.version }}
           pr_title="Prepare for $version"
