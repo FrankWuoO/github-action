@@ -9,6 +9,12 @@ jobs:
     if: github.event.review.state == 'approved' && github.event.pull_request.base.ref == 'master' && startsWith(github.event.pull_request.head.ref, 'staging/')
     runs-on: ubuntu-latest
     steps:
+      - name: Auto merge PR
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Extract version
         id: extract_version
         run: |
