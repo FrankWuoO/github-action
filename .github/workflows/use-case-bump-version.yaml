@@ -16,13 +16,19 @@ jobs:
   Bump-version:
     runs-on: ubuntu-latest
     steps:
+      - name: "Test working spacing"
+        run: |
+          echo "-Start testing"
+          pwd
+          ls -al
+          echo "-End testing"
+
       - name: "Checkout repo"
         id: checkout
         uses: actions/checkout@v3
         with:
           ref: ${{ inputs.new_branch }}
           fetch-depth: 0
-
 
       - name: "Upgrade version"
         run: |
