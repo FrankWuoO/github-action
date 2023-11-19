@@ -39,13 +39,21 @@ jobs:
         run: |
           latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
           git log $latest_tag..HEAD --pretty=format:"%s" | grep -E "\[JIRA-[0-9]+\]" | sed 's/^/- /' > $CHANGLOG_PATH
-          git commit -a -m "Update changelog"
+          if [[ `git status --porcelain` ]]; then
+            git commit -a -m "Update changelog"
+          else
+            echo "Same changelog"
+          fi
 
       - name: "Bump version"
         run: |
           sed -i "s/MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*/MARKETING_VERSION = $VERSION/" $PROJECT_PATH
           sed -i "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/" $PROJECT_PATH
-          git commit -a -m "Bump version ${{ inputs.version }}(${{ inputs.build_number }})"
+          if [[ `git status --porcelain` ]]; then
+            git commit -a -m "Bump version ${{ inputs.version }}(${{ inputs.build_number }})"
+          else
+            echo "Same version"
+          fi
 
       - name: "Push changes"
         uses: ad-m/github-push-action@master
