@@ -1,2 +1,0 @@
-- [JIRA-4] Feature b1 (#4)
-- [JIRA-3] Feature a1 (#3)
