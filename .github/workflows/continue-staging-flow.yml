@@ -43,6 +43,6 @@ jobs:
           
       - name: Merge PR into release
         run: |
-          gh pr merge master --auto
+          gh pr merge master --merge --auto 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
